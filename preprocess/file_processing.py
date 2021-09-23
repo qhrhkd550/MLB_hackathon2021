@@ -47,4 +47,8 @@ def merge_excel_file(file_path_list):
 
 
 if __name__ == '__main__':
-    pass
+    data_folder = '../data'
+    file_dict = take_file_path(data_folder)
+    print(file_dict.items())
+    dataframe = merge_excel_file(list(file_dict.values())[0])
+    print(dataframe.head())
