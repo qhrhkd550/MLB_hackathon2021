@@ -82,6 +82,8 @@ def groupby_mmsi(data):
                 'first(DT_POS_UTC)': sailing_first,
                 'last(DT_POS_UTC)': sailing_last,
                 'count*(SEQ_NO)': sailing_count,
+                
+                # XML file 저장 경로 !!!
                 'filepath_XML': "./xml/" + sailing_mmsi + "_" + str(sailing_destination_key) + ".xml"
             }
 
