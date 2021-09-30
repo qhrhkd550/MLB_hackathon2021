@@ -2,6 +2,7 @@ import pandas as pd
 from xml.etree.ElementTree import Element, dump, ElementTree
 import json
 
+
 def header_update(data):
     # header 추출
     index = data.columns.values.tolist()
@@ -25,7 +26,7 @@ def type_update(data):
     return data
 
 
-def groupby_mmsi(data):
+def groupby_mmsi(data, xml_folder, json_folder):
     # mmsi 별 그룹화 하기 위해 고유한 mmsi 추출
     mmsi_list = data['MMSI'].unique()
 
@@ -83,17 +84,17 @@ def groupby_mmsi(data):
                 'first(DT_POS_UTC)': sailing_first,
                 'last(DT_POS_UTC)': sailing_last,
                 'count*(SEQ_NO)': sailing_count,
-                
+
                 # XML file 저장 경로 !!!
-                'filepath_XML': "./xml/" + sailing_mmsi + "_" + str(sailing_destination_key) + ".xml"
+                'filepath_XML': xml_folder + "/" + sailing_mmsi + "_" + str(sailing_destination_key) + ".xml"
             }
 
             df_sailing = df_sailing.append(data, ignore_index=True)
-        
-        # Smartship data 보유한 538008382만 일단 
+
+        # Smartship data 보유한 538008382만 일단
         if pd.Series(df_sailing['MMSI'] == '538008382').all():
-            make_json(df_sailing)
-            
+            make_json(df_sailing, json_folder)
+
         # -------------------------------------------------------------------------- 항차별로 YYYY-MM-DD HH feature 추가 ----------------------------------------------------------------------------------
 
         for i in range(len(df_sailing)):
@@ -138,37 +139,34 @@ def groupby_mmsi(data):
             file_path = df_sailing.iloc[i]['filepath_XML']
             tree.write(file_path)
             # --------------------------------------------------------------------------
-            
+
 
 # 항차 별 json 파일 만들기
-def make_json(df_sailing):
+def make_json(df_sailing, json_folder):
     df_sailing['first(DT_POS_UTC)'] = pd.to_datetime(df_sailing['first(DT_POS_UTC)'])
     df_sailing['last(DT_POS_UTC)'] = pd.to_datetime(df_sailing['last(DT_POS_UTC)'])
-    
+
     df_sailing['first'] = df_sailing['first(DT_POS_UTC)'].dt.strftime('%Y-%m-%d %H:%M')
     df_sailing['first'] = pd.to_datetime(df_sailing['first'])
-    
+
     df_sailing['last'] = df_sailing['last(DT_POS_UTC)'].dt.strftime('%Y-%m-%d %H:%M')
     df_sailing['last'] = pd.to_datetime(df_sailing['last'])
-    
-    
+
     df_smartship = pd.read_csv(str(df_sailing.iloc[0]['MMSI']) + "_SmartShipData.csv")
-    display(df_smartship)
     df_smartship['DateTime'] = pd.to_datetime(df_smartship['DateTime'])
-    
-    
+
     for i in range(len(df_sailing)):
         json_data = []
         start_date = df_sailing.iloc[i]['first']
         end_date = df_sailing.iloc[i]['last']
-        file_name = "./json/" + str(df_sailing.iloc[i]['MMSI']) + "_" + str(df_sailing.iloc[i]['DESTINATION_KEY']) + ".json"
-        
+        file_name = json_folder + "/" + str(df_sailing.iloc[i]['MMSI']) + "_" + str(df_sailing.iloc[i]['DESTINATION_KEY']) + ".json"
+
         df_for_json = df_smartship[(start_date < df_smartship['DateTime']) & (df_smartship['DateTime'] <= end_date)]
-        
+
         if len(df_for_json) > 0:
             for j in range(len(df_for_json)):
-                json_data.append([str(df_for_json.iloc[j]['DateTime']), 'ShipSpeed_km/h', round(abs(df_for_json.iloc[j]['VesselSpeed_km/h']), 1)])
-
+                json_data.append([str(df_for_json.iloc[j]['DateTime']), 'ShipSpeed_km/h',
+                                  round(abs(df_for_json.iloc[j]['VesselSpeed_km/h']), 1)])
 
             with open(file_name, 'w', encoding="utf-8") as make_file:
                 json.dump(json_data, make_file, ensure_ascii=False, indent="\t")
