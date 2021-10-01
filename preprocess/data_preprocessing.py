@@ -39,8 +39,14 @@ def preprocessing_excel_df(data_excel):
     preprocessed_dataframe = pp_dataframe
     return preprocessed_dataframe
 
-def generate_db(pp_dataframe):
+
+# 파일 저장하는 기능 사용시 False->True
+def generate_db(pp_dataframe, db_save_folder='./db', save_file=False):
     mmsi_list = pp_dataframe['MMSI'].unique()
+
+    df_sailing = pd.DataFrame(
+        columns=['MMSI', 'DESTINATION', 'DRAUGHT', 'DESTINATION_KEY', 'first(DT_POS_UTC)', 'last(DT_POS_UTC)',
+                 'count*(SEQ_NO)' ])
 
     for id_name, mmsi in enumerate(mmsi_list):
         df_new = pp_dataframe[pp_dataframe['MMSI'] == mmsi]
@@ -48,9 +54,6 @@ def generate_db(pp_dataframe):
 
         # ------------------------------------------------------------------- 항차 별 feature 생성 -------------------------------------------------------------------------------------------------
 
-        df_sailing = pd.DataFrame(
-            columns=['MMSI', 'DESTINATION', 'DRAUGHT', 'DESTINATION_KEY', 'first(DT_POS_UTC)', 'last(DT_POS_UTC)',
-                     'count*(SEQ_NO)' ])
 
         for sailing in range(1, max(df_new['DESTINATION_KEY']) + 1):
             tmp = df_new[df_new['DESTINATION_KEY'] == sailing]
@@ -89,6 +92,15 @@ def generate_db(pp_dataframe):
     # 운항일 계산
     df_sailing['PERIOD'] = (df_sailing['last(DT_POS_UTC)'] - df_sailing['first(DT_POS_UTC)']).dt.days.astype('int16')
 
+    # save csv file
+    if save_file:
+        for id_name, mmsi in enumerate(mmsi_list):
+            _tmp_df = df_sailing[df_sailing['MMSI'] == str(mmsi)]
+            db_save_path = f'{db_save_folder}/{mmsi}_DB.csv'
+            check_folder_exist(db_save_path)
+            _tmp_df.to_csv(db_save_path,index=False)
+
+
     return df_sailing
  
 
@@ -96,6 +108,7 @@ def generate_db(pp_dataframe):
 ## xml file path : ./web/XML/{MMSI}/*.xml
 def generate_xml(xml_folder, pp_dataframe, database):
     mmsi_list = database['MMSI'].unique()
+    
     
     for i in range(len(database)):
         _mmsi     = database.iloc[i]['MMSI']
@@ -339,16 +352,17 @@ if __name__ == '__main__':
     data_folder = '../data'
     xml_folder  = '../web/XML'
     json_folder = '../web/JSON'
+    db_folder   = '../web/DB'
 
     file_dict = fp.take_file_path(data_folder)
     print(file_dict.items())
     dataframe_1 = fp.merge_excel_file(list(file_dict.values())[0])
-    dataframe_2 = fp.merge_excel_file(list(file_dict.values())[0])
+    dataframe_2 = fp.merge_excel_file(list(file_dict.values())[1])
     dataframe_t = dataframe_1.append(dataframe_2)
 
     #Preprocessing된 dataframe 생성
     pp_dataframe = preprocessing_excel_df(dataframe_t)
     #DB - MMSI, 항차, Destination, Draught, 운항시작일시, 운항종료일시, 데이터 건수
-    database     = generate_db(pp_dataframe)
+    database     = generate_db(pp_dataframe,db_folder,save_file=True)
     # make xml files
     generate_xml(xml_folder, pp_dataframe, database)
