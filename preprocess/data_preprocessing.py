@@ -7,10 +7,10 @@ import json
 
 '''
 ###########################################################################################
-# 2021.10.01. 22:15 DongWon Choo                                                          # 
-# 각 함수별 사용 방법은 if __name__ == '__main__': 아래에 넣어 두었음                     #
-# 순서대로 사용하기만 하면 됨                                                             #
-# Json 만드는 부분 추가 부탁                                                              #
+ 2021.10.01. 22:15 DongWon Choo                                                           
+ 각 함수별 사용 방법은 if __name__ == '__main__': 아래에 넣어 두었음                     
+ 순서대로 사용하기만 하면 됨                                                             
+ Json 만드는 부분 추가 부탁                                                              
 ###########################################################################################
 '''
 
@@ -45,27 +45,6 @@ def generate_db(pp_dataframe):
     for id_name, mmsi in enumerate(mmsi_list):
         df_new = pp_dataframe[pp_dataframe['MMSI'] == mmsi]
 
-        # 시간 순 정렬
-        #df_new.sort_values(by=['DT_POS_UTC'])
-
-        ## DESTINATIPN(-1) 생성
-        #df_new['DESTINATION(-1)'] = 0
-        #df_new['DESTINATION(-1)'][1:] = df_new['DESTINATION'][:-1]
-        #df_new['DESTINATION(-1)'][0] = 'missing'
-
-        ## DESTINATION_KEY 생성
-        #df_new['DESTINATION_KEY'] = 0
-        #for i, index in enumerate(df_new.index):
-        #    if i == 0:
-        #        df_new['DESTINATION_KEY'].loc[index] = 1
-        #    else:
-        #        if df_new['DESTINATION'].loc[index] == df_new['DESTINATION(-1)'].loc[index]:
-        #            df_new['DESTINATION_KEY'].loc[index] = df_new['DESTINATION_KEY'].loc[prev_index]
-
-        #        else:
-        #            df_new['DESTINATION_KEY'].loc[index] = df_new['DESTINATION_KEY'].loc[prev_index] + 1
-
-        #    prev_index = index
 
         # ------------------------------------------------------------------- 항차 별 feature 생성 -------------------------------------------------------------------------------------------------
 
