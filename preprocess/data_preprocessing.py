@@ -15,6 +15,10 @@ import json
  2021.10.02 Bokwang Hwang
  xml 파일 생성 위치 수정
  json 파일 생성 코드 추가
+ ----------------------------------------------------------------------------------
+ 2021.10.04 16:20 DongWon Choo
+ json 만드는 함수 수정 - mmsi 값 받아와서 그 데이터만 수행, SmartShip 데이터 경로 인자 추가
+ json 빈 파일 만들도록 소스코드 수정
 ###########################################################################################
 '''
 
@@ -108,10 +112,12 @@ def generate_db(pp_dataframe, db_save_folder='./db', save_file=False):
     return df_sailing
  
 
-def generate_json(json_folder, df_sailing):
-    print(df_sailing)
-    df_sailing['first(DT_POS_UTC)'] = pd.to_datetime(df_sailing['first(DT_POS_UTC)'])
-    df_sailing['last(DT_POS_UTC)'] = pd.to_datetime(df_sailing['last(DT_POS_UTC)'])
+def generate_json(json_folder, database, mmsi, smartship_data_path):
+    #db_mmsi_list = databse['MMSI'].unique()
+    assert Path(smartship_data_path).is_file(), f'Check Smartship data path: {smartship_data_path}'
+    df_sailing = database[database['MMSI'] == mmsi]
+    #df_sailing['first(DT_POS_UTC)'] = pd.to_datetime(df_sailing['first(DT_POS_UTC)'])
+    #df_sailing['last(DT_POS_UTC)'] = pd.to_datetime(df_sailing['last(DT_POS_UTC)'])
 
     df_sailing['first'] = df_sailing['first(DT_POS_UTC)'].dt.strftime('%Y-%m-%d %H:%M')
     df_sailing['first'] = pd.to_datetime(df_sailing['first'])
@@ -119,7 +125,8 @@ def generate_json(json_folder, df_sailing):
     df_sailing['last'] = df_sailing['last(DT_POS_UTC)'].dt.strftime('%Y-%m-%d %H:%M')
     df_sailing['last'] = pd.to_datetime(df_sailing['last'])
 
-    df_smartship = pd.read_csv(str(df_sailing.iloc[0]['MMSI']) + "_SmartShipData.csv")
+    #df_smartship = pd.read_csv(str(df_sailing.iloc[0]['MMSI']) + "_SmartShipData.csv")
+    df_smartship = pd.read_csv(smartship_data_path)
     df_smartship['DateTime'] = pd.to_datetime(df_smartship['DateTime'])
 
     for i in range(len(df_sailing)):
@@ -135,6 +142,9 @@ def generate_json(json_folder, df_sailing):
                 json_data.append([str(df_for_json.iloc[j]['DateTime']), 'ShipSpeed_km/h',
                                   round(abs(df_for_json.iloc[j]['VesselSpeed_km/h']), 1)])
 
+            with open(file_name, 'w', encoding="utf-8") as make_file:
+                json.dump(json_data, make_file, ensure_ascii=False, indent="\t")
+        else:
             with open(file_name, 'w', encoding="utf-8") as make_file:
                 json.dump(json_data, make_file, ensure_ascii=False, indent="\t")
 
@@ -185,152 +195,6 @@ def generate_xml(xml_folder, pp_dataframe, database):
 
 
 
-## 잠정적 사용 금지 by. DongWon Choo
-# def groupby_mmsi(data, xml_folder, json_folder):
-#     # mmsi 별 그룹화 하기 위해 고유한 mmsi 추출
-#     mmsi_list = data['MMSI'].unique()
-#
-#     # mmsi별 작업처리
-#     for id_name, mmsi in enumerate(mmsi_list):
-#         df_new = data[data['MMSI'] == mmsi]
-#
-#         # 필요없는 컬럼 제거
-#         df_new.drop(
-#             ['SHIP_NAME', 'IMO', 'SOG', 'SOURCE', 'ETA', 'NAV_STATUS', 'NAV_STATUS_CODE', 'CALL_SIGN', 'VESSEL_TYPE',
-#              'VESSEL_TYPE_CODE', 'VESSEL_TYPE_CARGO', 'VESSEL_CLASS', 'LENGTH', 'WIDTH', 'FLAG', 'FLAG_CODE', 'COG',
-#              'ROT', 'HEADING', 'VESSEL_TYPE_MAIN', 'VESSEL_TYPE_SUB', 'MESSAGE_TYPE'], axis=1, inplace=True)
-#
-#         # 시간 순 정렬
-#         df_new.sort_values(by=['DT_POS_UTC'])
-#
-#         # DESTINATIPN(-1) 생성
-#         df_new['DESTINATION(-1)'] = 0
-#         df_new['DESTINATION(-1)'][1:] = df_new['DESTINATION'][:-1]
-#         df_new['DESTINATION(-1)'][0] = 'missing'
-#
-#         # DESTINATION_KEY 생성
-#         df_new['DESTINATION_KEY'] = 0
-#         for i, index in enumerate(df_new.index):
-#             if i == 0:
-#                 df_new['DESTINATION_KEY'].loc[index] = 1
-#             else:
-#                 if df_new['DESTINATION'].loc[index] == df_new['DESTINATION(-1)'].loc[index]:
-#                     df_new['DESTINATION_KEY'].loc[index] = df_new['DESTINATION_KEY'].loc[prev_index]
-#
-#                 else:
-#                     df_new['DESTINATION_KEY'].loc[index] = df_new['DESTINATION_KEY'].loc[prev_index] + 1
-#
-#             prev_index = index
-#
-#         # ------------------------------------------------------------------- 항차 별 feature 생성 -------------------------------------------------------------------------------------------------
-#
-#         df_sailing = pd.DataFrame(
-#             columns=['MMSI', 'DESTINATION', 'DESTINATION_KEY', 'first(DT_POS_UTC)', 'last(DT_POS_UTC)',
-#                      'count*(SEQ_NO)', 'filepath_XML'])
-#
-#         for sailing in range(1, max(df_new['DESTINATION_KEY']) + 1):
-#             tmp = df_new[df_new['DESTINATION_KEY'] == sailing]
-#             sailing_mmsi = str(tmp['MMSI'].iloc[0])
-#             sailing_destination = tmp['DESTINATION'].iloc[0]
-#             sailing_destination_key = tmp['DESTINATION_KEY'].iloc[0]
-#             sailing_first = tmp['DT_POS_UTC'].iloc[0]
-#             sailing_last = tmp['DT_POS_UTC'].iloc[-1]
-#             sailing_count = len(tmp)
-#
-#             data = {
-#                 'MMSI': sailing_mmsi,
-#                 'DESTINATION': sailing_destination,
-#                 'DESTINATION_KEY': sailing_destination_key,
-#                 'first(DT_POS_UTC)': sailing_first,
-#                 'last(DT_POS_UTC)': sailing_last,
-#                 'count*(SEQ_NO)': sailing_count,
-#
-#                 # XML file 저장 경로 !!!
-#                 'filepath_XML': xml_folder + "/" + sailing_mmsi + "_" + str(sailing_destination_key) + ".xml"
-#             }
-#
-#             df_sailing = df_sailing.append(data, ignore_index=True)
-#
-#         # Smartship data 보유한 538008382만 일단
-#         if pd.Series(df_sailing['MMSI'] == '538008382').all():
-#             make_json(df_sailing, json_folder)
-#
-#         # -------------------------------------------------------------------------- 항차별로 YYYY-MM-DD HH feature 추가 ----------------------------------------------------------------------------------
-#
-#         for i in range(len(df_sailing)):
-#             df_for_xml = df_new[df_new['DESTINATION_KEY'] == df_sailing.iloc[i]['DESTINATION_KEY']][
-#                 ['SHIP_ID', 'MMSI', 'TRACKING_DATE', 'DT_STATIC_UTC', 'DT_POS_UTC', 'INSERT_DATE', 'LATITUDE',
-#                  'LONGITUDE', 'DESTINATION']]
-#
-#             df_for_xml['TRACKING_DATE'] = pd.to_datetime(df_for_xml['TRACKING_DATE'])
-#
-#             df_for_xml['YYYY-MM-DD HH'] = df_for_xml['TRACKING_DATE'].dt.strftime('%Y-%m-%d %H')
-#
-#             # ---------------------------- YYYY-MM-DD HH   Mean(LATITUDE)   Mean(LONGITUDE) ----------------------------
-#             YYYY_MM_DD_list = df_for_xml['YYYY-MM-DD HH'].unique()
-#
-#             df_final = pd.DataFrame(columns=['YYYY-MM-DD HH', 'Mean(LATITUDE)', 'Mean(LONGITUDE)'])
-#
-#             for id_name, YYYY in enumerate(YYYY_MM_DD_list):
-#                 df_YYYY = df_for_xml[df_for_xml['YYYY-MM-DD HH'] == YYYY]
-#
-#                 data = {
-#                     'YYYY-MM-DD HH': YYYY,
-#                     'Mean(LATITUDE)': str(df_YYYY['LATITUDE'].mean()),
-#                     'Mean(LONGITUDE)': str(df_YYYY['LONGITUDE'].mean())
-#                 }
-#
-#                 df_final = df_final.append(data, ignore_index=True)
-#             # -----------------------------------------------------------------------------------------------------------
-#
-#             # -------------------------- xml 만들기 ------------------------------------
-#             root = Element("markers")
-#
-#             for j in range(len(df_final)):
-#                 node1 = Element("marker")
-#                 node1.text = "\n" + "lat='" + str(df_final.iloc[j]['Mean(LATITUDE)']) + "' lng='" + str(
-#                     df_final.iloc[j]['Mean(LONGITUDE)']) + "'"
-#                 root.append(node1)
-#             dump(root)
-#
-#             #             display(root)
-#             tree = ElementTree(root)
-#
-#             file_path = df_sailing.iloc[i]['filepath_XML']
-#             tree.write(file_path)
-#             # --------------------------------------------------------------------------
-
-
-# 항차 별 json 파일 만들기
-# def make_json(df_sailing, json_folder):
-#     df_sailing['first(DT_POS_UTC)'] = pd.to_datetime(df_sailing['first(DT_POS_UTC)'])
-#     df_sailing['last(DT_POS_UTC)'] = pd.to_datetime(df_sailing['last(DT_POS_UTC)'])
-#
-#     df_sailing['first'] = df_sailing['first(DT_POS_UTC)'].dt.strftime('%Y-%m-%d %H:%M')
-#     df_sailing['first'] = pd.to_datetime(df_sailing['first'])
-#
-#     df_sailing['last'] = df_sailing['last(DT_POS_UTC)'].dt.strftime('%Y-%m-%d %H:%M')
-#     df_sailing['last'] = pd.to_datetime(df_sailing['last'])
-#
-#     df_smartship = pd.read_csv(str(df_sailing.iloc[0]['MMSI']) + "_SmartShipData.csv")
-#     df_smartship['DateTime'] = pd.to_datetime(df_smartship['DateTime'])
-#
-#     for i in range(len(df_sailing)):
-#         json_data = []
-#         start_date = df_sailing.iloc[i]['first']
-#         end_date = df_sailing.iloc[i]['last']
-#         file_name = json_folder + "/" + str(df_sailing.iloc[i]['MMSI']) + "_" + str(df_sailing.iloc[i]['DESTINATION_KEY']) + ".json"
-#
-#         df_for_json = df_smartship[(start_date < df_smartship['DateTime']) & (df_smartship['DateTime'] <= end_date)]
-#
-#         if len(df_for_json) > 0:
-#             for j in range(len(df_for_json)):
-#                 json_data.append([str(df_for_json.iloc[j]['DateTime']), 'ShipSpeed_km/h',
-#                                   round(abs(df_for_json.iloc[j]['VesselSpeed_km/h']), 1)])
-#
-#             with open(file_name, 'w', encoding="utf-8") as make_file:
-#                 json.dump(json_data, make_file, ensure_ascii=False, indent="\t")
-
 
 
 def header_update(data):
@@ -377,6 +241,7 @@ def check_folder_exist(file_path):
     else:
         pass
 
+## 필요 없음 삭제 요청
 def exist_smartship_data(file_path):
     path = Path(file_path)
     if '538008382' in os.listdir(path):
@@ -389,20 +254,23 @@ def exist_smartship_data(file_path):
 if __name__ == '__main__':
     import os, sys
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    import preprocess.file_processing as fp
+    import file_processing as fp
 
-    data_folder = '../data'
+    data_folder = '../data/AIS_data'
     xml_folder  = '../web/XML'
     json_folder = '../web/JSON'
     db_folder   = '../web/DB'
-    smartship_data_folder = '../smartship_data'
+    smartship_mmsi = '538008382'
+    smartship_data_path = '../data/smartship_data/538008382_SmartShipData.csv'
 
     file_dict = fp.take_file_path(data_folder)
-    print(file_dict.items())
-    dataframe_1 = fp.merge_excel_file(list(file_dict.values())[0])
-    dataframe_2 = fp.merge_excel_file(list(file_dict.values())[1])
-    dataframe_t = dataframe_1.append(dataframe_2)
-    dataframe_t = dataframe_1
+    print(file_dict.keys())
+    dataframe_list = list()
+    for _path_list in file_dict.values():
+        __dataframe = fp.merge_excel_file(_path_list)
+        dataframe_list.append(__dataframe)
+    dataframe_t = pd.concat(dataframe_list)
+    del dataframe_list
 
     #Preprocessing된 dataframe 생성
     pp_dataframe = preprocessing_excel_df(dataframe_t)
@@ -411,5 +279,9 @@ if __name__ == '__main__':
     # make xml files
     generate_xml(xml_folder, pp_dataframe, database)
     # make json files
-    if exist_smartship_data(smartship_data_folder):
-        generate_json(json_folder, database)
+    generate_json(
+        json_folder         = json_folder,
+        database            = database,
+        mmsi                = smartship_mmsi,
+        smartship_data_path = smartship_data_path,
+    )
