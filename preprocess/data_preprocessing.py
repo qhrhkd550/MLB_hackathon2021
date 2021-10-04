@@ -129,6 +129,9 @@ def generate_json(json_folder, database, mmsi, smartship_data_path):
     df_smartship = pd.read_csv(smartship_data_path)
     df_smartship['DateTime'] = pd.to_datetime(df_smartship['DateTime'])
 
+    # Check json folder
+    check_folder_exist(f'{json_folder}/test.json')
+
     for i in range(len(df_sailing)):
         json_data = []
         start_date = df_sailing.iloc[i]['first']
@@ -152,7 +155,9 @@ def generate_json(json_folder, database, mmsi, smartship_data_path):
 def generate_xml(xml_folder, pp_dataframe, database):
     mmsi_list = database['MMSI'].unique()
     
-    
+    # check folder
+    check_folder_exist(f'{xml_folder}/test.xml')
+
     for i in range(len(database)):
         _mmsi     = database.iloc[i]['MMSI']
         _dest_key = database.iloc[i]['DESTINATION_KEY']
@@ -188,7 +193,7 @@ def generate_xml(xml_folder, pp_dataframe, database):
         tree = ElementTree(root)
         # file_path = f'{xml_folder}/{_mmsi}/dest_key_{_dest_key}.xml'
         file_path = f'{xml_folder}/{_mmsi}_{_dest_key}.xml'
-        check_folder_exist(file_path)
+        #check_folder_exist(file_path)
         tree.write(file_path)
 
 
