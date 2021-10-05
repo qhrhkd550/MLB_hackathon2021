@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 import sklearn as sk
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor, AdaBoostRegressor, VotingRegressor
 
 
@@ -25,20 +25,26 @@ def data_split(dataframe, test_ratio=0.2):
                                         )
     return train_x, train_y, test_x,test_y
 
+def generate_kfold_data(dataframe,n_splits=5,shuffle=True):
+    x_data = dataframe[['EngineLoad_%','WindSpeed','Draught','PropellerRPM']].to_numpy()
+    y_data = dataframe['VesselSpeed_km/h'].to_numpy()
+    kf = KFold(n_splits=n_splits, shuffle=shuffle)
+    kfold_data_dict = {}
+    for i, (_train_index, _test_index) in enumerate(kf.split(x_data)):
+        kfold_data_dict[i] = {}
+        kfold_data_dict[i]['train_x'] = x_data[_train_index]
+        kfold_data_dict[i]['train_y'] = y_data[_train_index]
+        kfold_data_dict[i]['test_x']  = x_data[_test_index]
+        kfold_data_dict[i]['test_y']  = y_data[_test_index]
+    return kfold_data_dict
+
 
 class machine_learning_model:
     def __init__(self,
-        train_x,
-        train_y,
-        test_x,
-        test_y,
+        kfold_data
     ):
-        train_data = (train_x, train_y)
-        test_data = (test_x, test_y)
-
         self.model = self.Model()
-        self.model.fit(*train_data)
-        self.test_RMSE = self.Model_eval(*test_data)
+        self.kfold_RMSE = self.Model_eval_kfold(kfold_data)
 
     def Model(self,):
         # example
@@ -51,10 +57,22 @@ class machine_learning_model:
         )
         return GBR
 
-    def Model_eval(self,x,y):
-        test_pred_y = self.model.predict(x)
-        test_RMSE   = rmse(test_pred_y,y)
-        return test_RMSE
+    def Model_eval_kfold(self,kfold_data):
+        rmse_list = list()
+        for _fold_data in kfold_data.values():
+            __train_data = (_fold_data['train_x'],_fold_data['train_y'])
+            __test_data = (_fold_data['test_x'],_fold_data['test_y'])
+            __model = self.Model()
+            __model.fit(*__train_data)
+            __rmse = self.calc_rmse(*__test_data,__model)
+            rmse_list.append(__rmse)
+        mean_rmse = np.mean(rmse_list)
+        return mean_rmse
+
+    def calc_rmse(self,x,y, model):
+        pred_y = model.predict(x)
+        model_rmse   = rmse(pred_y,y)
+        return model_rmse
 
 
 class GradientBoost_model(machine_learning_model):
@@ -109,30 +127,26 @@ if __name__ == '__main__':
     data_path = '../data/AI_train_data/538008382_SmartShipData_forAI.csv'
 
     dataframe = import_SmartShip_AI_data(data_path)
-    train_x, train_y, test_x,test_y = data_split(dataframe,test_ratio=0.2)
+    #train_x, train_y, test_x,test_y = data_split(dataframe,test_ratio=0.2)
+    kfold_data = generate_kfold_data(
+        dataframe= dataframe,
+        n_splits = 5,
+        shuffle = True,
+    )
     del dataframe
 
     GBR_model = GradientBoost_model(
-        train_x = train_x,
-        train_y = train_y,
-        test_x  = test_x,
-        test_y  = test_y,
+        kfold_data = kfold_data
     )
 
     RFR_model = RandomForest_model(
-        train_x = train_x,
-        train_y = train_y,
-        test_x  = test_x,
-        test_y  = test_y,
+        kfold_data = kfold_data
     )
 
     VR_model = VotingRegressor_model(
-        train_x = train_x,
-        train_y = train_y,
-        test_x  = test_x,
-        test_y  = test_y,
+        kfold_data = kfold_data
     )
 
-    print(f'GradientBoost_model RMSE : {GBR_model.test_RMSE}')
-    print(f'RandomForest_model RMSE : {RFR_model.test_RMSE}')
-    print(f'VotingRegressor_model RMSE : {VR_model.test_RMSE}')
+    print(f'GradientBoost_model RMSE : {GBR_model.kfold_RMSE}')
+    print(f'RandomForest_model RMSE : {RFR_model.kfold_RMSE}')
+    print(f'VotingRegressor_model RMSE : {VR_model.kfold_RMSE}')
