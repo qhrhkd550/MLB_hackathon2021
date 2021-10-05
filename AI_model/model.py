@@ -7,6 +7,9 @@ from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor, A
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 
+import tensorflow as tf
+import tensorflow.keras as k
+
 
 def rmse(pred_y, true_y):
     pred_y = np.array(pred_y).reshape(-1,)
@@ -148,10 +151,45 @@ class PolynomialRegression_model(machine_learning_model):
             rmse_list.append(__rmse)
         mean_rmse = np.mean(rmse_list)
         return mean_rmse
+
+
+class MultiLayerPerceptron_model(machine_learning_model):
+    def Model(self,):
+        model = k.Sequential([
+            k.layers.Dense(64,activation='relu'),
+            k.layers.Dense(32,activation='relu'),
+            k.layers.Dense(8,activation='relu'),
+            k.layers.Dense(1,activation='linear'),
+        ])
+        model.compile(
+            optimizer='adam',
+            loss = 'mse',
+        )
+        return model
+
+
+    def Model_eval_kfold(self,kfold_data):
+        rmse_list = list()
+        for _fold_data in kfold_data.values():
+            __train_data = (_fold_data['train_x'],_fold_data['train_y'])
+            __test_data = (_fold_data['test_x'],_fold_data['test_y'])
+            __model = self.Model()
+            __model.fit(*__train_data,
+                epochs=20,
+                verbose=0
+            )
+            __rmse = self.calc_rmse(*__test_data,__model)
+            rmse_list.append(__rmse)
+            del __model
+        mean_rmse = np.mean(rmse_list)
+        return mean_rmse
+
+
+
     
 
 if __name__ == '__main__':
-    data_path = './data/AI_train_data/538008382_SmartShipData_forAI.csv'
+    data_path = '../data/AI_train_data/538008382_SmartShipData_forAI.csv'
 
     dataframe = import_SmartShip_AI_data(data_path)
     #train_x, train_y, test_x,test_y = data_split(dataframe,test_ratio=0.2)
@@ -182,8 +220,16 @@ if __name__ == '__main__':
         kfold_data = kfold_data
     )
 
+    MLP_model = MultiLayerPerceptron_model(
+        kfold_data = kfold_data
+    )
+
     print(f'GradientBoost_model RMSE : {GBR_model.kfold_RMSE}')
     print(f'RandomForest_model RMSE : {RFR_model.kfold_RMSE}')
     print(f'VotingRegressor_model RMSE : {VR_model.kfold_RMSE}')
     print(f'LinearRegression_model RMSE : {LR_model.kfold_RMSE}')
     print(f'PolynomialRegression_model RMSE : {PR_model.kfold_RMSE}')
+    print(f'MultiLayerPerceptron_model RMSE : {MLP_model.kfold_RMSE}')
+
+
+
