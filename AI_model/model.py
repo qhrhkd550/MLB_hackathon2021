@@ -189,7 +189,13 @@ class MultiLayerPerceptron_model(machine_learning_model):
     
 
 if __name__ == '__main__':
+    import os, sys
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from preprocess.data_preprocessing import check_folder_exist
+    
+
     data_path = '../data/AI_train_data/538008382_SmartShipData_forAI.csv'
+    result_save_path = '../web/AI_result/RMSE.csv'
 
     dataframe = import_SmartShip_AI_data(data_path)
     #train_x, train_y, test_x,test_y = data_split(dataframe,test_ratio=0.2)
@@ -231,5 +237,24 @@ if __name__ == '__main__':
     print(f'PolynomialRegression_model RMSE : {PR_model.kfold_RMSE}')
     print(f'MultiLayerPerceptron_model RMSE : {MLP_model.kfold_RMSE}')
 
-
-
+    result_dict = {
+            'method' : [
+                    'GradientBoost'       ,
+                    'RandomForest'        ,
+                    'VotingRegressor'     ,
+                    'LinearRegression'    ,
+                    'PolynomialRegression',
+                    'MultiLayerPerceptron',
+                ],
+            'RMSE'   : [
+                    GBR_model.kfold_RMSE,
+                    RFR_model.kfold_RMSE,
+                    VR_model.kfold_RMSE,
+                    LR_model.kfold_RMSE,
+                    PR_model.kfold_RMSE,
+                    MLP_model.kfold_RMSE,
+                ],
+    }
+    result_df = pd.DataFrame(result_dict)
+    check_folder_exist(result_save_path)
+    result_df.to_csv(result_save_path,index=False)

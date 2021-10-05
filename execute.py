@@ -1,5 +1,6 @@
 import preprocess.file_processing as fp
 import preprocess.data_preprocessing as dp
+import AI_model.model as model
 
 import argparse
 import pandas as pd
@@ -70,16 +71,84 @@ def executor(
         smartship_data_path = smartship_data_path,
     )
 
-    if verbose: print(f'Finish')
+    #if verbose: print(f'Finish')
         
+
+def AI_model_compare(train_data_path,result_save_path,verbose=False):
+
+    if verbose: print(f'Model compare Start')
+
+    if verbose: print(f'Load data')
+    dataframe = model.import_SmartShip_AI_data(train_data_path)
+    kfold_data = model.generate_kfold_data(
+        dataframe= dataframe,
+        n_splits = 5,
+        shuffle = True,
+    )
+    del dataframe
+    
+    if verbose: print(f'Training LinearRegression model')
+    LR_model = model.LinearRegression_model(
+        kfold_data = kfold_data
+    )
+    
+    if verbose: print(f'Training PolynomialRegression model')
+    PR_model = model.PolynomialRegression_model(
+        kfold_data = kfold_data
+    )
+
+    if verbose: print(f'Training GradientBoost model')
+    GBR_model = model.GradientBoost_model(
+        kfold_data = kfold_data
+    )
+
+    if verbose: print(f'Training RandomForest model')
+    RFR_model = model.RandomForest_model(
+        kfold_data = kfold_data
+    )
+
+    if verbose: print(f'Training VotingRegressor model')
+    VR_model = model.VotingRegressor_model(
+        kfold_data = kfold_data
+    )
+
+    if verbose: print(f'Training MultiLayerPerceptron model')
+    MLP_model = model.MultiLayerPerceptron_model(
+        kfold_data = kfold_data
+    )
+
+
+    result_dict = {
+            'method' : [
+                    'LinearRegression'    ,
+                    'PolynomialRegression',
+                    'GradientBoost'       ,
+                    'RandomForest'        ,
+                    'VotingRegressor'     ,
+                    'MultiLayerPerceptron',
+                ],
+            'RMSE'   : [
+                    LR_model.kfold_RMSE,
+                    PR_model.kfold_RMSE,
+                    GBR_model.kfold_RMSE,
+                    RFR_model.kfold_RMSE,
+                    VR_model.kfold_RMSE,
+                    MLP_model.kfold_RMSE,
+                ],
+    }
+    result_df = pd.DataFrame(result_dict)
+    dp.check_folder_exist(result_save_path)
+    result_df.to_csv(result_save_path,index=False)
 
 def main():
     parser = argparse.ArgumentParser(description='Hackaton')
 
     parser.add_argument('-f', '--data_folder',required=True,help='Data file folder')
+    parser.add_argument('-tr', '--ai_train', required=True, help='AI_train file folder')
     parser.add_argument('-x', '--xml_folder', required=True, help='XML file folder')
     parser.add_argument('-j', '--json_folder', required=True, help='JSON file folder')
     parser.add_argument('-db', '--database', required=True, help='Database file folder')
+    parser.add_argument('-ai', '--ai_result', required=True, help='AI model result rmse file folder')
     parser.add_argument('--SH_mmsi', default='538008382', help='SmartShip MMSI')
     parser.add_argument(
             '--SH_data',
@@ -98,6 +167,13 @@ def main():
         smartship_data_path = args.SH_data,
         verbose             = args.verbose,
     )
+
+    AI_model_compare(
+        train_data_path  = args.ai_train,
+        result_save_path = args.ai_result,
+        verbose          = args.verbose,
+    )
+
 
 if __name__ == '__main__':
     main()
