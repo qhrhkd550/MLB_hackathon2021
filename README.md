@@ -1,5 +1,5 @@
 # 빅데이터/AI 기반 최적 추진효율 선박운항 기술 개발  
-<img src="demo.png" height="300" />
+<img src="demo.png" height="400" />  
 ## 필요 환경
 - python 3.x 버전
 - 패키지
