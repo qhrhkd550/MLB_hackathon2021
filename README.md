@@ -5,8 +5,8 @@
   패키지 설치 방법 : `pip install -r requirements.txt` 
   
 ## 실행 방법
-python execute.py [인자] [값]
-예시)
+python execute.py [인자] [값]  
+예시)  
 ```bash
 python execute.py \
     -f ./data/AIS_data \
@@ -29,22 +29,22 @@ python execute.py \
 - -v, --verbose : 실행 과정 출력
   
 ### 데이터 경로
-- AIS data
-AIS데이터는 선박별로 폴더를 만들어서 excel 파일을 넣어주면 폴더별로 정리하여 데이터를 분석합니다.
-예)
-./data/AIS_data/{선박1}/{데이터...}
+- AIS data  
+AIS데이터는 선박별로 폴더를 만들어서 excel 파일을 넣어주면 폴더별로 정리하여 데이터를 분석합니다.  
+예)  
+./data/AIS_data/{선박1}/{데이터...}  
 ./data/AIS_data/{선박2}/{데이터...}
-- SmartShip data
+- SmartShip data  
 SmartShip 데이터로 csv 파일
-- AI train data
+- AI train data  
 SmartShip 데이터 중에서 학습에 사용할 데이터만 선택된 csv 파일
   
 ### 결과 파일
-- xml 파일
+- xml 파일  
 Google map에 표시할 선박의 좌표를 저장한 데이터
-- json 파일
+- json 파일  
 선박의 속력과 엔진 부하를 표로 보여줄 데이터
-- database 파일
+- database 파일  
 선박의 항차별 운행 정보를 정리한 데이터
-- AI model result 파일
+- AI model result 파일  
 선박 속력을 예측하기위해 실험한 AI 모델들의 결과를 저장한 데이터
